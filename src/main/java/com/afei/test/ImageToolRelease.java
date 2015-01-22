@@ -45,7 +45,7 @@ public class ImageToolRelease {
   }
 
   public static void main(String args[]) throws Exception {
-    decompressImageOfDir("E:\\imageCompressTest\\FullTest\\src");
+    decompressImageOfDir("E:\\imageCompressTest\\testAgain");
   }
 
   public static void decompressImageOfDir(String imageDir){
@@ -56,6 +56,8 @@ public class ImageToolRelease {
         try {
           decompress(file.getCanonicalPath(),false);
         } catch (IOException e) {
+          e.printStackTrace();
+        } catch (Exception e) {
           e.printStackTrace();
         }
         System.out.println("End at : "+getCurrentTime()+"\n\n");
@@ -71,13 +73,12 @@ public class ImageToolRelease {
    * @throws java.io.IOException
    */
   private static void decompress(String srcPath, boolean isSame) throws IOException {
-    System.out.println("src Path = "+srcPath);
     String destPath ;
     if(!isSame) {
     int index = srcPath.indexOf(".");
       destPath = srcPath.substring(0,index)+getCurrentTimestamp()+"-"+COMPRESS_LEVEL
             +srcPath.substring(index,srcPath.length());
-      destPath = destPath.replace("src","result");
+      //destPath = destPath.replace("src","result");
     }else{
       destPath = srcPath;
     }
@@ -86,7 +87,6 @@ public class ImageToolRelease {
     BufferedImage src = javax.imageio.ImageIO.read(srcFile);
     int imageWidth = src.getWidth(null);
     int imageHeight = src.getHeight(null);
-
     Thumbnails.Builder<BufferedImage> builder ;
     if ((float)DEST_WIDTH/DEST_HEIGHT != (float)imageWidth/imageHeight) {
 
@@ -95,16 +95,46 @@ public class ImageToolRelease {
         src = Thumbnails.of(src).rotate(90).scale((double)DEST_WIDTH/DEST_HEIGHT).asBufferedImage();
       }
       else {
-        if ((double)imageWidth/imageHeight > (double)DEST_WIDTH/DEST_HEIGHT) {
-          src = Thumbnails.of(srcPath).height(DEST_HEIGHT).asBufferedImage();
-        } else {
-          src = Thumbnails.of(srcPath).width(DEST_WIDTH).asBufferedImage();
+        //如果图片是太宽，那么需要旋转90°，因为目标图片是高>宽
+        boolean needRotate = false ;
+        if((double)imageWidth/imageHeight > (double)DEST_HEIGHT/DEST_WIDTH/2){
+          needRotate = true;
+          //旋转后，图片的长宽对换
+          int temp = imageWidth;
+          imageWidth = imageHeight;
+          imageHeight = temp;
         }
 
+        if ((double)imageWidth/imageHeight > (double)DEST_WIDTH/DEST_HEIGHT) {
+          if(needRotate){
+            src = Thumbnails.of(src).rotate(90)
+                    .width(imageHeight*DEST_WIDTH/DEST_HEIGHT)
+                    .height(imageHeight)
+                    .asBufferedImage();
+          }else {
+            src = Thumbnails.of(src)
+                    .width(imageHeight*DEST_WIDTH/DEST_HEIGHT)
+                    .height(imageHeight)
+                    .asBufferedImage();
+          }
+        } else {
+          if(needRotate){
+            src = Thumbnails.of(src).rotate(90)
+                    .width(imageWidth)
+                    .height(imageWidth*DEST_WIDTH/DEST_HEIGHT)
+                    .asBufferedImage();
+          }else {
+            src = Thumbnails.of(src)
+                    .width(imageWidth)
+                    .height(imageWidth*DEST_WIDTH/DEST_HEIGHT)
+                    .asBufferedImage();
+          }
+        }
       }
 
-      builder = Thumbnails.of(src).sourceRegion(Positions.CENTER, DEST_WIDTH, DEST_HEIGHT)
-              .size(DEST_WIDTH, DEST_HEIGHT);
+      builder = Thumbnails.of(src)
+              .forceSize(DEST_WIDTH, DEST_HEIGHT);
+      //直接从图片中心位置裁剪出需要的尺寸.sourceRegion(Positions.CENTER, DEST_WIDTH, DEST_HEIGHT)*/
 
     } else {
       builder = Thumbnails.of(src).size(DEST_WIDTH, DEST_HEIGHT);
